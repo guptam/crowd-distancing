@@ -9,7 +9,9 @@ import json
 radius = 5
 points = None
 grabbing = None
+
 size = 500
+scale = 0.25
 
 def compute_homography(points):
 	camera_points = np.array([
@@ -25,7 +27,7 @@ def compute_homography(points):
 		[1, 0], #bottom_left
 	])
 
-	h, _ = cv2.findHomography(camera_points, size/4 + map_points * size / 2)
+	h, _ = cv2.findHomography(camera_points, size * (scale / 2) + size * scale + map_points * size * scale)
 	return h
 
 def in_circle(point, circle, radius):
@@ -64,15 +66,18 @@ cv2.setMouseCallback("image", click_and_crop)
 h, w = image.shape[0], image.shape[1]
 
 points = [ 
-	( int (w/2 - w/5), int(h/2 - h/5) ), 
-	( int (w/2 - w/5), int(h/2 + h/5) ), 
-	( int (w/2 + w/5), int(h/2 + h/5) ), 
-	( int (w/2 + w/5), int(h/2 - h/5) ) 
+	( int (w/2 - w/4), int(h/2 - h/4) ), 
+	( int (w/2 - w/4), int(h/2 + h/4) ), 
+	( int (w/2 + w/4), int(h/2 + h/4) ), 
+	( int (w/2 + w/4), int(h/2 - h/4) ), 
+
+	( int (w/8 - w/10), int(h/8 - h/10) ), 
+	( int (w/8 - w/10), int(h/8 + h/10) ),
 ]
 
 def draw_points(image):
 	color = (192, 55, 240)
-	for idx in range( len(points) ):
+	for idx in range( 4 ):
 		point = points[idx]
 		r = radius
 		if grabbing is not None and grabbing == idx:
@@ -82,6 +87,15 @@ def draw_points(image):
 	cv2.line(image, points[1], points[2], color, 2)
 	cv2.line(image, points[2], points[3], color, 2)
 	cv2.line(image, points[3], points[0], color, 2)
+
+	color = (240, 192, 55)
+	for idx in range( 4, 6 ):
+		point = points[idx]
+		r = radius
+		if grabbing is not None and grabbing == idx:
+			r = radius * 2
+		cv2.circle(image, point, r, color, -1)
+	cv2.line(image, points[4], points[5], color, 2)
 
 homography = compute_homography(points)
 
@@ -100,7 +114,6 @@ while True:
 	cv2.imshow("warp", warped)
 	key = cv2.waitKey(1) & 0xFF
 
-	# if the 'c' key is pressed, break from the loop
 	if key == ord("q"):
 		break
 	if key == ord("s"):
@@ -114,7 +127,12 @@ while True:
 			[0, 1], #top_right
 			[1, 1], #bottom_right
 			[1, 0], #bottom_left
-		]}
+		], "scale": scale,
+		"dist": [
+			[points[4][0], points[4][1]],
+			[points[5][0], points[5][1]]
+		]
+		}
 
 		with open("calib.json", "w") as f:
 			f.write(json.dumps(calib))
